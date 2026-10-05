@@ -1,23 +1,57 @@
+---
+import "../assets/app.css";
+import Background from '../components/animatedBackground/LawScales.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import Book1 from '../assets/books/book1.png';
+import Book2 from '../assets/books/book2.png';
+import Book3 from '../assets/books/book3.png';
+---
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl" data-theme="law">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" href="/favicon.png" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		
+		<!-- Primary Meta Tags -->
+		<title>مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا</title>
+		<meta name="title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
+		<meta name="description" content="مكتب المحامي بلمولود عماد منير، محامي معتمد لدى المحكمة العليا ومجلس الدولة بالجزائر. خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في القضايا المدنية والجزائية والتجارية." />
+		<meta name="keywords" content="محامي في الجزائر, محامي المحكمة العليا, مجلس الدولة, استشارات قانونية, قضايا جزائية, قضايا مدنية, قانون الأعمال, بلمولود عماد منير, محاماة الجزائر, محامي درارية" />
+		<meta name="author" content="الأستاذ بلمولود عماد منير" />
+
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://belmouloud.law/" />
+		<meta property="og:title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
+		<meta property="og:description" content="خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في مختلف المجالات أمام كافة الجهات القضائية بالجزائر." />
+		<meta property="og:image" content="/banner.jpeg" />
+		<meta property="og:locale" content="ar_DZ" />
+
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content="https://belmouloud.law/" />
+		<meta property="twitter:title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
+		<meta property="twitter:description" content="خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في مختلف المجالات أمام كافة الجهات القضائية بالجزائر." />
+		<meta property="twitter:image" content="/banner.jpeg" />
 	</head>
-	<body>
-		<slot />
+	<body class="font-body text-base-content antialiased">
+		<!-- Background Animation -->
+		<div class="fixed inset-0 z-0 bg-base-100/50">
+			<!-- Background component needs a light metal since bg is light -->
+			<Background metal="#c9b398" line="#7C8774" deep="#faf5ef" bookOpacity={0.15} books={[Book1, Book2, Book3]}/>
+		</div>
+
+		<!-- Main Content Wrapper -->
+		<div class="relative z-10 min-h-[100svh] flex flex-col">
+			<Navbar />
+			<main class="flex-grow">
+				<slot />
+			</main>
+			<Footer />
+		</div>
 	</body>
 </html>
-
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>

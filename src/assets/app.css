@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+
+
+@plugin "daisyui/theme" {
+  name: "law";
+  default: false;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: #fbfcf7;
+  --color-base-200: #faf5ef;
+  --color-base-300: #efdecd;
+  --color-base-content: oklch(22.389% 0.031 278.072);
+  --color-primary: #502223;
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: #1c2340;
+  --color-secondary-content: oklch(100% 0 0);
+  --color-accent: #7C8774;
+  --color-accent-content: oklch(100% 0 0);
+  --color-neutral: #c9b398;
+  --color-neutral-content: oklch(100% 0 0);
+  --color-info: oklch(60% 0.126 221.723);
+  --color-info-content: oklch(100% 0 0);
+  --color-success: oklch(62% 0.194 149.214);
+  --color-success-content: oklch(100% 0 0);
+  --color-warning: oklch(85% 0.199 91.936);
+  --color-warning-content: oklch(0% 0 0);
+  --color-error: oklch(70% 0.191 22.216);
+  --color-error-content: oklch(0% 0 0);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* 1. Define @font-face rules pointing to your public folder */
+@font-face {
+  font-family: 'Amiri';
+  src: url('/fonts/Amiri-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 2. Register them into Tailwind v4 theme */
+@theme {
+  --font-heading: 'Amiri', serif;
+  --font-body: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+}

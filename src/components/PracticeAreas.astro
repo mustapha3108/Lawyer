@@ -1,0 +1,57 @@
+---
+import { Image } from 'astro:assets';
+import madaniImg from '../assets/madani.jpg';
+import a9ariImg from '../assets/3a9ari.jpg';
+import tijariImg from '../assets/tijari.jpg';
+
+const areas = [
+  {
+    title: 'القانون المدني',
+    description: 'معالجة قضايا التعويضات، الالتزامات المدنية، العقود، والنزاعات بين الأفراد بكل احترافية.',
+    image: madaniImg,
+    alt: 'القانون المدني'
+  },
+  {
+    title: 'القانون العقاري',
+    description: 'تسوية النزاعات العقارية، قضايا الملكية، التوثيق، والمنازعات المتعلقة بالبناء والتعمير.',
+    image: a9ariImg,
+    alt: 'القانون العقاري'
+  },
+  {
+    title: 'القانون التجاري والأعمال',
+    description: 'تأسيس الشركات، منازعات الشركاء، تحصيل الديون التجارية، وصياغة العقود التجارية والبنكية.',
+    image: tijariImg,
+    alt: 'قانون الأعمال'
+  }
+];
+---
+
+<section id="practice-areas" class="py-20 px-4 bg-base-200/50 backdrop-blur-sm relative z-10 border-y border-base-300/30">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl md:text-5xl font-heading font-bold text-primary mb-4">مجالات التخصص</h2>
+      <div class="w-24 h-1 bg-accent mx-auto rounded-full"></div>
+      <p class="mt-6 text-lg text-neutral-600 max-w-2xl mx-auto font-body">
+        تغطية قانونية شاملة تضمن حماية مصالحك في مختلف فروع القانون.
+      </p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {areas.map(area => (
+        <div class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-200 overflow-hidden group">
+          <figure class="h-60 relative overflow-hidden">
+            <Image src={area.image} alt={area.alt} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            <h3 class="absolute bottom-4 right-6 text-2xl font-heading font-bold text-white z-10">{area.title}</h3>
+          </figure>
+          <div class="card-body font-body">
+            <p class="text-neutral-600 text-lg leading-relaxed">{area.description}</p>
+            <div class="card-actions justify-end mt-4">
+              <a href="#contact" class="btn btn-outline btn-primary btn-sm font-heading">طلب استشارة</a>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

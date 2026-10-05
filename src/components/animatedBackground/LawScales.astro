@@ -1,0 +1,728 @@
+---
+/**
+ * LawScales — self-contained animated background.
+ *
+ * Drop it inside any element with `position: relative` (or absolute/fixed/sticky).
+ * It fills that element, is transparent (the host's background shows through),
+ * never captures input, and stays at the bottom of the stacking order.
+ *
+ *   <section class="relative bg-[#14110d]">
+ *     <LawScales books={[coverA, '/covers/b.jpg', { src: coverC, alt: '' }]} />
+ *     <div class="relative z-10">…content…</div>
+ *   </section>
+ *
+ * Layers (bottom → top, all inside an isolated stacking context):
+ *   1. Floating books — CSS idle float + scroll-driven parallax/tilt.
+ *   2. Scales of justice — flat, finely detailed vector art; self-driven CSS motion only.
+ */
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+
+type CoverSrc = string | ImageMetadata;
+export type LawScalesCover = CoverSrc | { src: CoverSrc; alt?: string };
+
+interface Props {
+  /** Book cover images: URLs, imported images (auto-optimized to WebP), or { src, alt }. */
+  books?: LawScalesCover[];
+  /** Number of floating books (covers repeat to fill). Default: max(covers, 8), capped at 16. */
+  bookCount?: number;
+  /** Base opacity of the books layer (0–1). */
+  bookOpacity?: number;
+  /** How strongly books react to scroll (parallax multiplier). */
+  scrollFactor?: number;
+  /** Main metal fill of the scales (and gold accents on fallback covers). */
+  metal?: string;
+  /** Engraving / outline color. */
+  line?: string;
+  /** Interior color of the pans. */
+  deep?: string;
+  /** Duration in seconds of one full balancing cycle. */
+  duration?: number;
+  /** Size multiplier of the scales relative to the container. */
+  size?: number;
+  /** Seed for the deterministic book layout. */
+  seed?: number;
+  class?: string;
+}
+
+const {
+  books = [],
+  bookCount,
+  bookOpacity = 0.5,
+  scrollFactor = 0.35,
+  metal = '#c9a24a',
+  line = '#5a3f12',
+  deep = '#2e2108',
+  duration = 12,
+  size = 1,
+  seed = 7,
+  class: className = '',
+} = Astro.props;
+
+/* ---------- covers ---------- */
+const isMeta = (v: unknown): v is ImageMetadata =>
+  typeof v === 'object' && v !== null && 'format' in v && 'width' in v;
+
+async function resolveCover(c: LawScalesCover) {
+  let src: CoverSrc;
+  let alt = '';
+  if (typeof c === 'string' || isMeta(c)) src = c;
+  else {
+    src = c.src;
+    alt = c.alt ?? '';
+  }
+  if (isMeta(src)) {
+    const img = await getImage({ src, width: 320, format: 'webp', quality: 70 });
+    return { url: img.src, alt };
+  }
+  return { url: src, alt };
+}
+const covers = await Promise.all(books.map(resolveCover));
+
+/* ---------- deterministic book layout ---------- */
+function mulberry32(a: number) {
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rnd = mulberry32(seed);
+const shuffle = (n: number) => {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const fallbackColors = ['#5b1f24', '#1f3b2d', '#1e2a44', '#4a2f1a', '#3a1f3d', '#24343a'];
+const count = Math.max(0, Math.min(16, Math.round(bookCount ?? Math.max(covers.length, 8))));
+const xs = shuffle(count);
+const ys = shuffle(count);
+const f = (n: number, d = 2) => +n.toFixed(d);
+
+const bookItems = Array.from({ length: count }, (_, i) => {
+  const depth = 0.45 + rnd() * 0.55;
+  return {
+    depth: f(depth, 3),
+    x: f(((xs[i] + 0.15 + rnd() * 0.7) / count) * 100),
+    y: f((ys[i] + rnd() * 0.8) / count, 3),
+    w: f(9 + depth * 11),
+    o: f(bookOpacity * (0.55 + depth * 0.45), 3),
+    r: f((rnd() - 0.5) * 36),
+    fd: f(7 + rnd() * 6),
+    fdl: f(-rnd() * 12),
+    fa: f(1.5 + rnd() * 2.5),
+    cover: covers.length ? covers[i % covers.length] : null,
+    color: fallbackColors[i % fallbackColors.length],
+  };
+}).sort((a, b) => a.depth - b.depth); // nearer books paint last
+
+/* ---------- precomputed scale geometry (viewBox 0 0 400 440, pivot 200,110) ---------- */
+const PX = 200;
+const PY = 110;
+const pt = (r: number, deg: number) => {
+  const a = (deg * Math.PI) / 180;
+  return `${f(PX + r * Math.sin(a))} ${f(PY - r * Math.cos(a))}`;
+};
+const dialBand = `M${pt(64, -36)} A64 64 0 0 1 ${pt(64, 36)} L${pt(50, 36)} A50 50 0 0 0 ${pt(50, -36)} Z`;
+const dialTicks = Array.from({ length: 13 }, (_, i) => {
+  const a = -30 + i * 5;
+  const major = a % 15 === 0;
+  return `M${pt(major ? 52 : 56.5, a)} L${pt(62, a)}`;
+}).join(' ');
+const dialArc = `M${pt(53.5, -33)} A53.5 53.5 0 0 1 ${pt(53.5, 33)}`;
+const petals = Array.from({ length: 8 }, (_, i) => i * 45);
+const beads = Array.from({ length: 21 }, (_, i) => 120 + i * 8);
+const flutes = [194, 197.5, 200, 202.5, 206];
+---
+
+<div
+  class:list={['ls-root', className]}
+  data-law-scales
+  data-scroll-factor={scrollFactor}
+  aria-hidden="true"
+  style={`--ls-metal:${metal};--ls-line:${line};--ls-deep:${deep};--ls-dur:${duration}s;--ls-size:${size}`}
+>
+  <!-- Layer 1: floating books -->
+  <div class="ls-books">
+    {
+      bookItems.map((b) => (
+        <div
+          class="ls-book"
+          data-depth={b.depth}
+          data-y={b.y}
+          style={`--x:${b.x}%;--y:${b.y};--w:${b.w};--o:${b.o}`}
+        >
+          <div class="ls-float" style={`--fd:${b.fd}s;--fdl:${b.fdl}s;--fa:${b.fa}deg`}>
+            <div class="ls-body" style={`--r:${b.r}deg`}>
+              <span class="ls-pages" />
+              {b.cover ? (
+                <img class="ls-cover" src={b.cover.url} alt={b.cover.alt} loading="eager" decoding="async" draggable="false" />
+              ) : (
+                <span class="ls-cover ls-plain" style={`--c:${b.color}`}>
+                  <span class="ls-emblem" />
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Layer 2: the scales -->
+  <div class="ls-scale">
+    <!-- static: base, column, capital, fork, dial -->
+    <svg class="ls-static" viewBox="0 0 400 440" focusable="false">
+      <!-- dial -->
+      <path class="f" d={dialBand} />
+      <path class="e" d={dialArc} stroke-width="0.7" />
+      <path class="e" d={dialTicks} stroke-width="1" />
+      <circle class="d" cx="200" cy="44" r="2.2" />
+
+      <!-- fork holding the pivot -->
+      <path class="e" d="M185 122 L185 106 Q185 92 200 92 Q215 92 215 106 L215 122" stroke-width="6" />
+      <path class="e m" d="M185 122 L185 106 Q185 92 200 92 Q215 92 215 106 L215 122" stroke-width="3.4" />
+
+      <!-- capital (abacus + volutes) -->
+      <rect class="f" x="174" y="118" width="52" height="5" rx="1.5" />
+      <path class="f" d="M180 123 H220 Q221 131 214 134 H186 Q179 131 180 123 Z" />
+      <circle class="f" cx="181" cy="127.5" r="6" />
+      <circle class="f" cx="219" cy="127.5" r="6" />
+      <path class="e" d="M181 127.5 m-3.6 0 a3.6 3.6 0 1 0 3.6 -3.6 a2.2 2.2 0 1 0 2.2 2.2" stroke-width="0.8" />
+      <path class="e" d="M219 127.5 m3.6 0 a3.6 3.6 0 1 1 -3.6 -3.6 a2.2 2.2 0 1 1 -2.2 2.2" stroke-width="0.8" />
+      <path class="e" d="M188 128.5 H212" stroke-width="0.7" />
+      <rect class="f" x="186" y="134" width="28" height="5" rx="1.5" />
+
+      <!-- shaft -->
+      <rect class="f" x="190" y="139" width="20" height="222" />
+      <path class="e" d={flutes.map((x) => `M${x} 146 V236 M${x} 252 V354`).join(' ')} stroke-width="0.7" opacity="0.75" />
+      <!-- collars -->
+      <rect class="f" x="186.5" y="236" width="27" height="5" rx="1.5" />
+      <rect class="f" x="188" y="241" width="24" height="6" rx="1" />
+      <path class="e" d="M188 244 H212" stroke-width="0.6" stroke-dasharray="1 2" />
+      <rect class="f" x="186.5" y="247" width="27" height="5" rx="1.5" />
+
+      <!-- acanthus leaves -->
+      <path class="f" d="M191 362 Q176 358 170 343 Q176 345 180 349 Q181 342 178 337 Q188 343 192 356 Z" />
+      <path class="f" d="M209 362 Q224 358 230 343 Q224 345 220 349 Q219 342 222 337 Q212 343 208 356 Z" />
+      <path class="e" d="M190 359 Q182 352 179 343 M210 359 Q218 352 221 343" stroke-width="0.6" />
+
+      <!-- column base: torus + plinth -->
+      <rect class="f" x="183" y="358" width="34" height="12" rx="6" />
+      <path class="e" d="M186 364 H214" stroke-width="0.6" />
+      <rect class="f" x="176" y="370" width="48" height="10" rx="1.5" />
+
+      <!-- stepped base -->
+      <rect class="f" x="150" y="380" width="100" height="12" rx="2" />
+      <path class="e" d="M156 384 H244 M156 388 H244" stroke-width="0.6" />
+      <rect class="f" x="128" y="392" width="144" height="14" rx="2.5" />
+      <rect class="e" x="134" y="395.5" width="132" height="7" rx="1.5" stroke-width="0.7" />
+      <path class="e" d="M160 399 h8 M180 399 h8 M212 399 h8 M232 399 h8" stroke-width="0.7" />
+      <path class="d" d="M200 396.5 l2.5 2.5 l-2.5 2.5 l-2.5 -2.5 Z" />
+      <rect class="f" x="108" y="406" width="184" height="18" rx="3" />
+      <path class="e" d="M113 410 H287 M113 420 H287" stroke-width="0.6" />
+      {beads.map((x) => <circle class="d" cx={x} cy="415" r="1.7" />)}
+      <!-- feet -->
+      <path class="f" d="M114 424 h22 v3 q0 4 -4 4 h-14 q-4 0 -4 -4 Z" />
+      <path class="f" d="M264 424 h22 v3 q0 4 -4 4 h-14 q-4 0 -4 -4 Z" />
+    </svg>
+
+    <!-- beam (rotates about the pivot) -->
+    <div class="ls-beam">
+      <svg viewBox="20 40 360 100" focusable="false">
+        <!-- pointer needle -->
+        <path class="f" d="M200 112 L196.6 98 L200 58 L203.4 98 Z" stroke-width="0.9" />
+        <path class="f" d="M200 46 L203.6 52.5 L200 59 L196.4 52.5 Z" stroke-width="0.9" />
+
+        <!-- top scrollwork -->
+        <path class="e" d="M186 102 C176 94 164 94 161 99.5 C158.5 104 164 106.5 166 103" stroke-width="1.3" />
+        <path class="e" d="M214 102 C224 94 236 94 239 99.5 C241.5 104 236 106.5 234 103" stroke-width="1.3" />
+
+        <!-- beam body -->
+        <path
+          class="f"
+          d="M40 107.6 C110 104 160 102 186 101.5 L214 101.5 C240 102 290 104 360 107.6 L360 112.4 C290 116 240 118.5 214 119 L186 119 C160 118.5 110 116 40 112.4 Z"
+        />
+        <path class="e" d="M50 110 C120 109.2 168 109.8 184 110 M216 110 C232 109.8 280 109.2 350 110" stroke-width="0.8" stroke-dasharray="0.1 4" />
+        <path class="e" d="M150 104.6 V115.6 M250 104.6 V115.6 M100 106.3 V113.8 M300 106.3 V113.8" stroke-width="0.7" />
+
+        <!-- under scrollwork -->
+        <path class="e" d="M187 119 C178 129 162 130 157 123.5 C153.5 118.5 160 114.5 163.5 119" stroke-width="1.4" />
+        <path class="e" d="M213 119 C222 129 238 130 243 123.5 C246.5 118.5 240 114.5 236.5 119" stroke-width="1.4" />
+        <circle class="d" cx="163.5" cy="119" r="1.3" />
+        <circle class="d" cx="236.5" cy="119" r="1.3" />
+
+        <!-- end finials -->
+        <circle class="f" cx="40" cy="110" r="5.5" />
+        <circle class="f" cx="360" cy="110" r="5.5" />
+        <path class="f" d="M34.6 108.6 L28 110 L34.6 111.4 Z M365.4 108.6 L372 110 L365.4 111.4 Z" stroke-width="0.8" />
+        <circle class="f" cx="26.5" cy="110" r="2.4" stroke-width="0.9" />
+        <circle class="f" cx="373.5" cy="110" r="2.4" stroke-width="0.9" />
+
+        <!-- hub rosette -->
+        <circle class="f" cx="200" cy="110" r="13" stroke-width="1.4" />
+        <circle class="e" cx="200" cy="110" r="10.2" stroke-width="0.7" />
+        {petals.map((a) => <ellipse class="f" cx="200" cy="104.6" rx="1.7" ry="3.6" stroke-width="0.7" transform={`rotate(${a} 200 110)`} />)}
+        <circle class="d" cx="200" cy="110" r="2.2" />
+      </svg>
+
+      {
+        ['l', 'r'].map((side) => (
+          <div class={`ls-pan ls-pan--${side}`}>
+            <div class="ls-swing">
+              <svg viewBox="0 -6 140 216" focusable="false">
+                <!-- hook + crown ring -->
+                <circle class="e" cx="70" cy="0" r="3.6" stroke-width="3" />
+                <circle class="e m" cx="70" cy="0" r="3.6" stroke-width="1.4" />
+                <path class="e" d="M70 3.6 V11" stroke-width="3" />
+                <path class="e m" d="M70 3.6 V11" stroke-width="1.4" />
+                <ellipse class="f" cx="70" cy="13.5" rx="7" ry="2.8" stroke-width="1" />
+
+                <!-- center chain (behind) -->
+                <g opacity="0.7">
+                  <path class="cu" d="M70 16 V154" />
+                  <path class="co" d="M70 16 V154" />
+                  <path class="cx" d="M70 16 V154" />
+                </g>
+
+                <!-- pan interior -->
+                <ellipse class="k" cx="70" cy="160" rx="56" ry="7" stroke-width="1.2" />
+
+                <!-- side chains -->
+                <path class="cu" d="M65 15 L16 160 M75 15 L124 160" />
+                <path class="co" d="M65 15 L16 160 M75 15 L124 160" />
+                <path class="cx" d="M65 15 L16 160 M75 15 L124 160" />
+
+                <!-- bowl -->
+                <path class="f" d="M14 160 C16 190 40 202 70 202 C100 202 124 190 126 160 A56 7 0 0 1 14 160 Z" />
+                <path class="e" d="M19 172 C40 182 100 182 121 172" stroke-width="0.8" />
+                <path class="e" d="M22 177 C42 187 98 187 118 177" stroke-width="0.8" />
+                <path class="e" d="M35 192 C52 198 88 198 105 192" stroke-width="0.8" />
+                <path class="e" d="M27 182.5 C45 191 95 191 113 182.5" stroke-width="0.9" stroke-dasharray="0.1 5" />
+                <ellipse class="e" cx="70" cy="160" rx="51" ry="5" stroke-width="0.6" opacity="0.6" />
+                <ellipse class="e" cx="70" cy="160" rx="56" ry="7" stroke-width="1.2" />
+                <circle class="d" cx="16" cy="160" r="1.8" />
+                <circle class="d" cx="124" cy="160" r="1.8" />
+
+                <!-- drop knob -->
+                <path class="f" d="M61 201 Q70 213 79 201 Z" stroke-width="1" />
+                <circle class="f" cx="70" cy="208.5" r="2.2" stroke-width="0.9" />
+              </svg>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style>
+  .ls-root {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: transparent;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    isolation: isolate;
+    contain: strict;
+    container-type: size;
+  }
+
+  /* ---------- books ---------- */
+  .ls-books {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .ls-book {
+    --bw: min(calc(var(--w) * 1cqmin), 190px);
+    position: absolute;
+    top: 0;
+    left: var(--x);
+    width: var(--bw);
+    margin-left: calc(var(--bw) * -0.5);
+    aspect-ratio: 2 / 3;
+    opacity: var(--o);
+    transform: translate3d(0, calc(var(--y) * 100cqh), 0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .ls-float {
+    width: 100%;
+    height: 100%;
+    animation: ls-float var(--fd) ease-in-out var(--fdl) infinite alternate;
+    will-change: transform;
+  }
+  .ls-body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform: rotate(var(--r));
+  }
+  .ls-pages {
+    position: absolute;
+    inset: 2.5% -4% -2.5% 3%;
+    border-radius: 0 3px 3px 0;
+    background: repeating-linear-gradient(90deg, #ece2cb 0 2px, #d9cbad 2px 3px);
+    border: 1px solid rgb(0 0 0 / 0.35);
+  }
+  .ls-cover {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px 4px 4px 2px;
+  }
+  .ls-body::after {
+    /* spine hinge groove */
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 6%;
+    width: 1px;
+    background: rgb(0 0 0 / 0.45);
+  }
+  .ls-plain {
+    background: var(--c);
+  }
+  .ls-plain::before {
+    content: '';
+    position: absolute;
+    inset: 7% 9%;
+    border: 1px solid var(--ls-metal);
+    outline: 1px solid var(--ls-metal);
+    outline-offset: 2px;
+    opacity: 0.85;
+  }
+  .ls-plain::after {
+    content: '';
+    position: absolute;
+    left: 26%;
+    right: 26%;
+    top: 64%;
+    height: 7%;
+    border-block: 1px solid var(--ls-metal);
+    opacity: 0.85;
+  }
+  .ls-emblem {
+    position: absolute;
+    left: 50%;
+    top: 36%;
+    width: 22%;
+    aspect-ratio: 1;
+    border: 1px solid var(--ls-metal);
+    transform: translate(-50%, -50%) rotate(45deg);
+    opacity: 0.85;
+  }
+
+  /* ---------- scales ---------- */
+  .ls-scale {
+    --u: calc(100cqw / 400);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1;
+    width: min(calc(64cqw * var(--ls-size)), calc(74cqh * var(--ls-size) * 0.909));
+    aspect-ratio: 400 / 440;
+    translate: -50% -50%;
+    container-type: inline-size;
+  }
+  .ls-static {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .ls-beam {
+    position: absolute;
+    left: calc(20 * var(--u));
+    top: calc(40 * var(--u));
+    width: calc(360 * var(--u));
+    height: calc(100 * var(--u));
+    transform-origin: calc(180 * var(--u)) calc(70 * var(--u));
+    animation: ls-tilt var(--ls-dur) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: transform;
+  }
+  .ls-beam > svg,
+  .ls-swing > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .ls-pan {
+    position: absolute;
+    top: calc(64 * var(--u));
+    width: calc(140 * var(--u));
+    height: calc(216 * var(--u));
+    transform-origin: 50% calc(6 * var(--u));
+    animation: ls-untilt var(--ls-dur) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: transform;
+  }
+  .ls-pan--l {
+    left: calc(-50 * var(--u));
+  }
+  .ls-pan--r {
+    left: calc(270 * var(--u));
+  }
+  .ls-swing {
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% calc(6 * var(--u));
+    animation: ls-swing 3.6s ease-in-out -0.4s infinite alternate;
+    will-change: transform;
+  }
+  .ls-pan--r .ls-swing {
+    animation-duration: 4.1s;
+    animation-delay: -1.9s;
+  }
+
+  /* svg paint classes — flat fills + engraved linework, no lighting */
+  .f {
+    fill: var(--ls-metal);
+    stroke: var(--ls-line);
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+  }
+  .e {
+    fill: none;
+    stroke: var(--ls-line);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .e.m {
+    stroke: var(--ls-metal);
+  }
+  .d {
+    fill: var(--ls-line);
+  }
+  .k {
+    fill: var(--ls-deep);
+    stroke: var(--ls-line);
+  }
+  /* chains: outlined oval links + edge-on cross links */
+  .cu,
+  .co,
+  .cx {
+    fill: none;
+    stroke-dasharray: 5 4;
+  }
+  .cu {
+    stroke: var(--ls-line);
+    stroke-width: 2.8;
+    stroke-linecap: round;
+  }
+  .co {
+    stroke: var(--ls-metal);
+    stroke-width: 1.15;
+    stroke-linecap: round;
+  }
+  .cx {
+    stroke: var(--ls-line);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 7;
+    stroke-dashoffset: 3;
+  }
+
+  /* ---------- motion ---------- */
+  @keyframes ls-tilt {
+    0%,
+    100% {
+      transform: rotate(-6deg);
+    }
+    24% {
+      transform: rotate(4.5deg);
+    }
+    47% {
+      transform: rotate(-2.5deg);
+    }
+    73% {
+      transform: rotate(6.5deg);
+    }
+  }
+  @keyframes ls-untilt {
+    0%,
+    100% {
+      transform: rotate(6deg);
+    }
+    24% {
+      transform: rotate(-4.5deg);
+    }
+    47% {
+      transform: rotate(2.5deg);
+    }
+    73% {
+      transform: rotate(-6.5deg);
+    }
+  }
+  @keyframes ls-swing {
+    from {
+      transform: rotate(-1.3deg);
+    }
+    to {
+      transform: rotate(1.3deg);
+    }
+  }
+  @keyframes ls-float {
+    from {
+      transform: translate3d(0, -4%, 0) rotate(calc(var(--fa) * -1));
+    }
+    to {
+      transform: translate3d(0, 4%, 0) rotate(var(--fa));
+    }
+  }
+
+  /* paused while offscreen */
+  .ls-off .ls-beam,
+  .ls-off .ls-pan,
+  .ls-off .ls-swing,
+  .ls-off .ls-float {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ls-beam,
+    .ls-pan,
+    .ls-swing,
+    .ls-float {
+      animation: none;
+    }
+    .ls-beam {
+      transform: rotate(-3deg);
+    }
+    .ls-pan {
+      transform: rotate(3deg);
+    }
+  }
+</style>
+
+<script>
+  type Book = { el: HTMLElement; y: number; depth: number; h: number };
+  type Inst = { root: HTMLElement; books: Book[]; H: number; m: number; k: number; on: boolean };
+
+  const insts = new Map<Element, Inst>();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const last = new WeakMap<object, number>();
+  last.set(window, window.scrollY);
+
+  let target = 0; // accumulated scroll distance (all scrollers)
+  let cur = 0; // smoothed value
+  let raf = 0;
+
+  const clamp = (v: number, a: number) => (v < -a ? -a : v > a ? a : v);
+
+  function render(it: Inst, lag: number) {
+    const span = it.H + it.m * 2;
+    if (span <= 0) return;
+    for (const b of it.books) {
+      let y = (b.y * span - cur * b.depth * it.k) % span;
+      if (y < 0) y += span;
+      y -= it.m;
+      const tilt = reduce.matches ? 0 : clamp(lag * 0.06 * b.depth, 14);
+      b.el.style.transform = `translate3d(0,${y.toFixed(1)}px,0) rotate(${tilt.toFixed(2)}deg)`;
+    }
+  }
+
+  function tick() {
+    raf = 0;
+    cur = reduce.matches ? target : cur + (target - cur) * 0.1;
+    let lag = target - cur;
+    if (Math.abs(lag) < 0.05) {
+      cur = target;
+      lag = 0;
+    }
+    for (const it of insts.values()) if (it.on) render(it, lag);
+    if (lag !== 0) raf = requestAnimationFrame(tick);
+  }
+  const kick = () => {
+    if (!raf) raf = requestAnimationFrame(tick);
+  };
+
+  function onScroll(e: Event) {
+    const t = e.target;
+    let key: object;
+    let pos: number;
+    if (t === document || t === document.documentElement || t === document.body) {
+      key = window;
+      pos = window.scrollY;
+    } else if (t instanceof Element) {
+      key = t;
+      pos = t.scrollTop;
+    } else return;
+    const prev = last.get(key);
+    last.set(key, pos);
+    if (prev === undefined || prev === pos) return;
+    target += pos - prev;
+    kick();
+  }
+
+  const ro = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const it = insts.get(entry.target);
+      if (!it) continue;
+      it.H = it.root.clientHeight;
+      let maxH = 0;
+      for (const b of it.books) {
+        b.h = b.el.offsetHeight;
+        if (b.h > maxH) maxH = b.h;
+      }
+      it.m = maxH * 1.25 + 8; // margin so wrap-around happens fully offscreen (incl. rotation)
+      render(it, target - cur);
+    }
+  });
+
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const it = insts.get(entry.target);
+      if (!it) continue;
+      it.on = entry.isIntersecting;
+      it.root.classList.toggle('ls-off', !it.on);
+      if (it.on) render(it, target - cur);
+    }
+  });
+
+  function boot() {
+    for (const [el] of insts) {
+      if (!el.isConnected) {
+        ro.unobserve(el);
+        io.unobserve(el);
+        insts.delete(el);
+      }
+    }
+    document.querySelectorAll<HTMLElement>('[data-law-scales]').forEach((root) => {
+      if (insts.has(root)) return;
+      const books = Array.from(root.querySelectorAll<HTMLElement>('.ls-book'), (el) => ({
+        el,
+        y: parseFloat(el.dataset.y || '0'),
+        depth: parseFloat(el.dataset.depth || '1'),
+        h: 0,
+      }));
+      insts.set(root, {
+        root,
+        books,
+        H: 0,
+        m: 0,
+        k: parseFloat(root.dataset.scrollFactor || '0.35'),
+        on: true,
+      });
+      ro.observe(root);
+      io.observe(root);
+    });
+  }
+
+  document.addEventListener('scroll', onScroll, { passive: true, capture: true });
+  document.addEventListener('astro:page-load', boot);
+  boot();
+</script>

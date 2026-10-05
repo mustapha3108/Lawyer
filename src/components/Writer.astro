@@ -1,0 +1,66 @@
+---
+import { Image } from 'astro:assets';
+import book1 from '../assets/books/book1.png';
+import book2 from '../assets/books/book2.png';
+import book3 from '../assets/books/book3.png';
+
+const books = [
+  { 
+    img: book1, 
+    title: 'حصاد المحاماة في الطعون بالنقض الناجحة', 
+    desc: 'ثمانية عشر عريضة ومذكرة طعن بالنقض ناجحة، مرفقة بقرارات المحكمة العليا الفاصلة فيها.',
+    link: 'https://nllibrairie.com/produit/1-181/'
+  },
+  { 
+    img: book2, 
+    title: 'قضايا استوقفتني وكان بالإمكان أن يكون لها منحى آخر', 
+    desc: 'من يوميات ومذكرات محامي جزائري.',
+    link: 'https://nllibrairie.com/produit/1-273/'
+  },
+  { 
+    img: book3, 
+    title: 'دور مرافعة المحامي في تكوين قناعة القاضي الجزائي', 
+    desc: 'على ضوء قانون الإجراءات الجزائية والتطبيقات القضائية للمحكمة العليا.',
+    link: 'https://nllibrairie.com/produit/9789931244622/'
+  },
+];
+---
+
+<section id="writer" class="py-20 px-4 bg-base-100 relative z-10 border-t border-base-200">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl md:text-5xl font-heading font-bold text-primary mb-4">إصدارات ومؤلفات</h2>
+      <div class="w-24 h-1 bg-accent mx-auto rounded-full"></div>
+      <p class="mt-6 text-lg text-neutral-600 max-w-2xl mx-auto font-body">
+        إسهامات فكرية وأكاديمية تثري المكتبة القانونية وتكون مرجعاً للباحثين والممارسين.
+      </p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      {books.map((book) => (
+        <a href={book.link} target="_blank" rel="noopener noreferrer" class="flex flex-col items-center group cursor-pointer">
+          <!-- Book Cover with 3D-like hover effect -->
+          <div class="relative w-48 h-64 md:w-56 md:h-72 mb-6 perspective-1000">
+            <div class="w-full h-full rounded-md shadow-2xl transition-transform duration-500 group-hover:-translate-y-4 group-hover:rotate-y-12">
+              <Image src={book.img} alt={book.title} class="w-full h-full object-cover rounded-md" />
+              <!-- Highlight effect -->
+              <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/30 rounded-md"></div>
+            </div>
+          </div>
+          
+          <h3 class="text-2xl font-heading font-bold text-secondary mb-2 text-center group-hover:text-primary transition-colors">{book.title}</h3>
+          <p class="text-neutral-600 text-center font-body text-lg leading-relaxed">{book.desc}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .rotate-y-12 {
+    transform: rotateY(-12deg) translateY(-10px);
+  }
+</style>

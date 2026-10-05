@@ -1,0 +1,1010 @@
+---
+import type { ImageMetadata } from "astro";
+
+// ScalesOfJusticeBG.astro - High-Precision Architectural Scales & Floating Law Books Scroll
+export interface LawBook {
+  title: string;
+  subtitle?: string;
+  coverImage?: string | ImageMetadata; // Image URL, asset path, or imported ImageMetadata
+  cover?: string | ImageMetadata; // Fallback alias for coverImage
+  color?: string; // Deep leather / cloth cover tone
+  accentColor?: string; // Gold foil accent tone
+}
+
+interface Props {
+  className?: string;
+  primaryColor?: string;
+  darkColor?: string;
+  bgColor?: string;
+  plateColor?: string;
+  scaleSize?: number;
+  speed?: number;
+  books?: LawBook[];
+}
+
+const defaultBooks: LawBook[] = [
+  {
+    title: "CONSTITUTIONAL LAW",
+    subtitle: "TREATISE & PRECEDENTS",
+    color: "#1E3A8A", // Royal Sapphire / Ultramarine Cloth
+    accentColor: "#DE9E36", // Burnished Sunlit Gold
+    coverImage: "/law-book-cover.svg",
+  },
+  {
+    title: "LEX MERCATORIA",
+    subtitle: "INTERNATIONAL TRADE & CODES",
+    color: "#164E3D", // Deep Forest Malachite
+    accentColor: "#E0A96D", // Warm Amber Gold
+  },
+  {
+    title: "CORPUS JURIS CIVILIS",
+    subtitle: "JUSTINIAN CODEX",
+    color: "#781D2E", // Venetian Crimson / Burgundy Wine
+    accentColor: "#DE9E36", // Burnished Sunlit Gold
+  },
+  {
+    title: "EQUITY & REMEDIES",
+    subtitle: "DOCTRINES OF CHANCERY",
+    color: "#7C3B18", // Warm Cognac / Saddle Calfskin
+    accentColor: "#DE9E36", // Burnished Sunlit Gold
+  },
+  {
+    title: "FEDERAL EVIDENCE",
+    subtitle: "RULES & DOCTRINES",
+    color: "#4A1B4B", // Imperial Royal Plum / Damson
+    accentColor: "#E0A96D", // Warm Amber Gold
+  },
+  {
+    title: "CIVIL PROCEDURE",
+    subtitle: "JURISDICTION & VENUE",
+    color: "#0E4C5C", // Mediterranean Peacock Teal
+    accentColor: "#DE9E36", // Burnished Sunlit Gold
+  },
+];
+
+const {
+  className = "",
+  primaryColor = "#9C6826", // Warm Polished Burnished Bronze / Amber Brass
+    darkColor = "#24180E", // Deep Espresso Bronze / Umber Patina
+  bgColor = "#FAF8F5", // Warm Alabaster Parchment (Light Theme)
+  plateColor,
+  scaleSize = 0.92,
+  speed = 1.0,
+  books = defaultBooks,
+} = Astro.props;
+
+// Eagerly resolve any asset files located in src/assets
+const assetModules = import.meta.glob<{ default: ImageMetadata }>(
+  '/src/assets/**/*.{png,jpg,jpeg,webp,svg,gif,avif}',
+  { eager: true }
+);
+
+function resolveCoverUrl(input: string | ImageMetadata | undefined | null): string | undefined {
+  if (!input) return undefined;
+
+  // 1. Astro imported ImageMetadata object
+  if (typeof input === "object" && input !== null && "src" in input) {
+    return input.src;
+  }
+
+  if (typeof input !== "string") return undefined;
+  const trimmed = input.trim();
+  if (!trimmed) return undefined;
+
+  // 2. Absolute web URL, data URI, or already-built static URL
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("/_astro/")
+  ) {
+    return trimmed;
+  }
+
+  // 3. Public static directory path (e.g. "/law-book-cover.svg")
+  if (trimmed.startsWith("/") && !trimmed.startsWith("/src/assets")) {
+    return trimmed;
+  }
+
+  // 4. File in assets directory (e.g. "../assets/main/car.jpg", "assets/main/car.jpg", "car.jpg")
+  const normalizedSearch = trimmed
+    .replace(/^(\.\.\/)+/, "")
+    .replace(/^(\.\/)+/, "")
+    .replace(/^\/?src\//, "")
+    .replace(/^\/?assets\//, ""); // e.g. "main/car.jpg" or "car.jpg"
+
+  for (const [path, mod] of Object.entries(assetModules)) {
+    const cleanPath = path.replace(/^\/src\/assets\//, ""); // e.g. "main/car.jpg"
+    if (
+      cleanPath === normalizedSearch ||
+      cleanPath.endsWith("/" + normalizedSearch) ||
+      path.endsWith(trimmed) ||
+      cleanPath.split("/").pop() === normalizedSearch
+    ) {
+      return mod.default ? mod.default.src : (mod as any).src;
+    }
+  }
+
+  return trimmed;
+}
+
+const id = "ue-scales-justice-" + Math.random().toString(36).slice(2, 9);
+const hasSlot = Astro.slots.has('default');
+const containerClass = ("absolute inset-0 w-full h-full pointer-events-none overflow-hidden " + className).trim();
+
+const rawBooks = books && books.length > 0 ? books : defaultBooks;
+const normalizedBooks = rawBooks.map((book) => {
+  const resolved = resolveCoverUrl(book.coverImage || book.cover);
+  return {
+    ...book,
+    coverImage: resolved,
+    cover: resolved,
+  };
+});
+const booksJson = JSON.stringify(normalizedBooks);
+---
+
+<div
+  id={id}
+  class={`absolute inset-0 w-full h-full pointer-events-none overflow-hidden ${containerClass}`}
+  style={`background-color: ${bgColor};`}
+  data-primary={primaryColor}
+    data-dark={darkColor}
+  data-plate-color={plateColor}
+      data-size={scaleSize}
+  data-speed={speed}
+  data-books={booksJson}
+>
+  <canvas class="ue-scales-canvas absolute inset-0 w-full h-full pointer-events-none block"></canvas>
+
+  <!-- Ambient understated vignette for depth -->
+  <div
+    class="absolute inset-0 pointer-events-none"
+    style={`background: radial-gradient(ellipse at 50% 45%, ${primaryColor}0D 0%, transparent 70%), radial-gradient(circle at 50% 100%, #00000080 0%, transparent 80%);`}
+  ></div>
+
+  <!-- Slotted children overlay -->
+  {hasSlot && (
+    <div class="relative z-10 w-full h-full pointer-events-auto">
+      <slot />
+    </div>
+  )}
+</div>
+
+<script>
+  interface BookData {
+    title: string;
+    subtitle?: string;
+    coverImage?: string | { src: string };
+    cover?: string | { src: string };
+    color?: string;
+    accentColor?: string;
+  }
+
+  interface FloatingBookInstance {
+    data: BookData;
+    baseX: number; // 0 to 1 ratio of width
+    baseY: number; // 0 to 1 ratio of height
+    depth: number; // 0.35 to 1.0 (depth & parallax factor)
+    width: number;
+    height: number;
+    thickness: number;
+    yaw: number; // base rotation angle
+    pitch: number;
+    roll: number;
+    floatSpeed: number;
+    floatOffset: number;
+    parallaxSpeed: number;
+    imgElement?: HTMLImageElement;
+    imgLoaded: boolean;
+  }
+
+  function initScalesOfJustice(container: HTMLElement) {
+    if ((container as any)._ue_init) return;
+    (container as any)._ue_init = true;
+
+    const canvas = container.querySelector('.ue-scales-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Palette & Parameters
+    const primaryColor = container.dataset.primary || "#9C6826";
+    const darkColor = container.dataset.dark || "#24180E";
+    const plateColor = container.dataset.plateColor || primaryColor;
+    const scaleMultiplier = parseFloat(container.dataset.size || "1.0");
+    const speedMult = parseFloat(container.dataset.speed || "1.0");
+
+    let parsedBooks: BookData[] = [];
+    try {
+      if (container.dataset.books) {
+        parsedBooks = JSON.parse(container.dataset.books);
+      }
+    } catch (e) {}
+
+    let width = 0;
+    let height = 0;
+    let animId: number;
+
+    // 1. Scales: Pure Autonomous Deliberative Motion (Unaffected by scroll)
+    let angle = 0;
+    let angularVel = 0;
+    let leftPanSway = 0;
+    let rightPanSway = 0;
+    let leftPanVel = 0;
+    let rightPanVel = 0;
+    let simAccumulator = 0;
+
+    // 2. Floating Law Books: Scroll & Float Physics
+    let scrollY = window.scrollY;
+    let smoothScrollY = scrollY;
+    let lastScrollY = scrollY;
+    let scrollVelocity = 0;
+    let smoothScrollVelocity = 0;
+
+    // Preset distribution layout coordinates for books across flanks & background
+    // Ensuring books frame the central scales without directly blocking them
+    const layoutSlots = [
+      { xRatio: 0.12, yRatio: 0.22, depth: 0.85, yaw: -0.22, roll: -0.08, parallax: 0.55 },
+      { xRatio: 0.88, yRatio: 0.28, depth: 0.70, yaw: 0.24, roll: 0.12, parallax: 0.42 },
+      { xRatio: 0.20, yRatio: 0.76, depth: 0.95, yaw: 0.18, roll: 0.06, parallax: 0.65 },
+      { xRatio: 0.82, yRatio: 0.78, depth: 0.80, yaw: -0.16, roll: -0.10, parallax: 0.48 },
+      { xRatio: 0.08, yRatio: 0.52, depth: 0.55, yaw: 0.28, roll: 0.15, parallax: 0.32 },
+      { xRatio: 0.92, yRatio: 0.54, depth: 0.50, yaw: -0.26, roll: -0.14, parallax: 0.30 },
+      { xRatio: 0.30, yRatio: 0.15, depth: 0.40, yaw: 0.12, roll: -0.05, parallax: 0.24 },
+      { xRatio: 0.70, yRatio: 0.16, depth: 0.45, yaw: -0.14, roll: 0.08, parallax: 0.26 },
+    ];
+
+    let floatingBooks: FloatingBookInstance[] = [];
+
+    function initFloatingBooks() {
+      floatingBooks = [];
+      const imageCache: Record<string, HTMLImageElement> = {};
+
+      const count = Math.max(parsedBooks.length, 1);
+      for (let i = 0; i < count; i++) {
+        const bookData = parsedBooks[i % parsedBooks.length];
+        const slot = layoutSlots[i % layoutSlots.length];
+
+        const instance: FloatingBookInstance = {
+          data: bookData,
+          baseX: slot.xRatio,
+          baseY: slot.yRatio,
+          depth: slot.depth,
+          width: 130 * slot.depth,
+          height: 175 * slot.depth,
+          thickness: 24 * slot.depth,
+          yaw: slot.yaw,
+          pitch: 0.08,
+          roll: slot.roll,
+          floatSpeed: (0.8 + (i % 3) * 0.25) * speedMult,
+          floatOffset: (i * 1.618) * Math.PI,
+          parallaxSpeed: slot.parallax,
+          imgLoaded: false,
+        };
+
+        // If cover image provided, asynchronously load it
+        const rawCover = bookData.coverImage || bookData.cover;
+        const coverSrc = typeof rawCover === "string"
+          ? rawCover
+          : (rawCover && typeof rawCover === "object" && "src" in rawCover ? rawCover.src : "");
+
+        if (coverSrc) {
+          if (!imageCache[coverSrc]) {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = coverSrc;
+            img.onload = () => {
+              instance.imgLoaded = true;
+            };
+            imageCache[coverSrc] = img;
+          }
+          instance.imgElement = imageCache[coverSrc];
+          if (instance.imgElement.complete && instance.imgElement.naturalWidth > 0) {
+            instance.imgLoaded = true;
+          }
+        }
+
+        floatingBooks.push(instance);
+      }
+    }
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      width = rect.width || container.clientWidth || window.innerWidth;
+      height = rect.height || container.clientHeight || window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (floatingBooks.length === 0) {
+        initFloatingBooks();
+      }
+    }
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
+
+    // Scroll tracking
+    const updateScroll = () => {
+      scrollY = window.scrollY;
+      const dy = scrollY - lastScrollY;
+      lastScrollY = scrollY;
+      scrollVelocity += dy * 0.035;
+    };
+
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    updateScroll();
+
+    let lastTime = performance.now();
+
+    function render(now: number) {
+      if (!container.isConnected) {
+        ro.disconnect();
+        window.removeEventListener('scroll', updateScroll);
+        cancelAnimationFrame(animId);
+        return;
+      }
+
+      animId = requestAnimationFrame(render);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (width === 0 || height === 0) return;
+
+      // Smooth scroll & velocity damping
+      smoothScrollY += (scrollY - smoothScrollY) * 0.12;
+      smoothScrollVelocity += (scrollVelocity - smoothScrollVelocity) * 0.15;
+      scrollVelocity *= 0.88;
+
+      // --- Pure Autonomous Deliberative Motion for the Scales ---
+      // Slower, smaller oscillations for a heavy, majestic feel
+      const t = (now * 0.0008) * speedMult;
+      const autonomousTarget =
+        Math.sin(t * 1.0) * 0.08 +
+        Math.sin(t * 1.8 + 1.2) * 0.03 +
+        Math.cos(t * 0.5 + 2.8) * 0.02;
+
+      // Stable semi-implicit Euler integration with accumulator (125 Hz)
+      simAccumulator += dt;
+      simAccumulator = Math.min(simAccumulator, 0.1);
+      const step = 0.008; // 125Hz simulation step
+      while (simAccumulator >= step) {
+        // Lower spring constant and critical damping to eliminate wobble
+        const springK = 3.0;
+        const damping = 4.0; // Overdamped for heavy feel (critical is ~3.46)
+        const acc = (autonomousTarget - angle) * springK - angularVel * damping;
+        angularVel += acc * step;
+        angle += angularVel * step;
+
+        // Less pan sway
+        const leftTargetSway = -angle * 0.6 + Math.sin(t * 1.5) * 0.015;
+        const rightTargetSway = -angle * 0.6 + Math.sin(t * 1.5 + 2.2) * 0.015;
+
+        // Pan physics also critically/overdamped
+        leftPanVel += ((leftTargetSway - leftPanSway) * 8.0 - leftPanVel * 6.0) * step;
+        leftPanSway += leftPanVel * step;
+
+        rightPanVel += ((rightTargetSway - rightPanSway) * 8.0 - rightPanVel * 6.0) * step;
+        rightPanSway += rightPanVel * step;
+
+        simAccumulator -= step;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // --- 1. RENDER FLOATING LAW BOOKS (Deep layers behind scales) ---
+      // Sort books by depth so deeper books render behind closer ones
+      floatingBooks.sort((a, b) => a.depth - b.depth);
+
+      const timeSec = now * 0.001;
+
+      floatingBooks.forEach((book) => {
+        drawFloatingBook(ctx, book, width, height, timeSec, smoothScrollY, smoothScrollVelocity);
+      });
+
+      // --- 2. ARCHITECTURAL SCALES (Stationary & Autonomous) ---
+      const centerX = width / 2;
+      const centerY = height * 0.44;
+
+      // Responsive scaleRef: ~70-80% screen width on mobile, and 10% bigger on desktop
+      let phoneScale = 1.0;
+      if (width < 480) {
+        phoneScale = 0.88; // Yields ~74% total scale width on mobile phones (70-80% span)
+      } else if (width < 640) {
+        phoneScale = 0.90;
+      } else if (width < 768) {
+        phoneScale = 0.94;
+      } else if (width < 1024) {
+        phoneScale = 0.96;
+      }
+      // Base scale 0.33 (10% increase from 0.30)
+      const scaleRef = Math.min(width, height) * 0.33 * scaleMultiplier * phoneScale;
+
+      // Central Column & Plinth (Stationary)
+      drawPrecisionColumn(ctx, centerX, centerY, scaleRef, darkColor);
+
+      // Equilibrium Dial Arc & Precision Graduations (Stationary behind beam & needle)
+      drawEquilibriumDial(ctx, centerX, centerY, scaleRef, darkColor);
+
+      // Rotating Rigid Assembly: Balance Beam + Needle Pointer + Center Boss (Zero glitch transform)
+      const beamInfo = drawEngineeredBeam(ctx, centerX, centerY, scaleRef, angle, primaryColor, darkColor);
+
+      // Fine Link Suspension Chains & Concave Brass Pans (With customizable plate colors)
+      drawArchitecturalPans(
+        ctx,
+        beamInfo.leftHookX,
+        beamInfo.leftHookY,
+        beamInfo.rightHookX,
+        beamInfo.rightHookY,
+        scaleRef,
+        leftPanSway,
+        rightPanSway,
+        plateColor,
+        primaryColor
+      );
+    }
+
+    // --- FLOATING LAW BOOK RENDERING ---
+
+    function drawFloatingBook(
+      c: CanvasRenderingContext2D,
+      b: FloatingBookInstance,
+      w: number,
+      h: number,
+      time: number,
+      scrollOffset: number,
+      scrollVel: number
+    ) {
+      c.save();
+
+      // Autonomous floating motion: slow harmonic levitation & breathing
+      const floatY = Math.sin(time * b.floatSpeed + b.floatOffset) * 14 * b.depth;
+      const floatYaw = Math.sin(time * (b.floatSpeed * 0.7) + b.floatOffset) * 0.04;
+      const floatRoll = Math.cos(time * (b.floatSpeed * 0.8) + b.floatOffset) * 0.03;
+
+      // Scroll parallax displacement with seamless vertical wrap
+      const scrollDrift = scrollOffset * b.parallaxSpeed;
+
+      // Responsive sizing: books appear way smaller on smaller screens like phones
+      let responsiveFactor = 1.0;
+      if (w < 480) {
+        responsiveFactor = 0.45; // Small mobile phones (~50-55px width)
+      } else if (w < 640) {
+        responsiveFactor = 0.52; // Standard mobile (~65px width)
+      } else if (w < 768) {
+        responsiveFactor = 0.70; // Phablets / small tablets
+      } else if (w < 1024) {
+        responsiveFactor = 0.85; // Tablets
+      }
+
+      const bw = b.width * responsiveFactor;
+      const bh = b.height * responsiveFactor;
+      const bth = b.thickness * responsiveFactor;
+
+      const loopHeight = h + bh * 2.5;
+      const rawY = (b.baseY * h - scrollDrift + floatY) % loopHeight;
+      const posY = (rawY + loopHeight) % loopHeight - bh * 0.8;
+
+      // Horizontal position with slight scroll sway
+      const posX = b.baseX * w + Math.sin(time * 0.5 + b.floatOffset) * 6;
+
+      // Scroll velocity imparts dynamic 3D pitch and tilt
+      const dynamicPitch = b.pitch + scrollVel * 0.008;
+      const dynamicYaw = b.yaw + floatYaw;
+      const dynamicRoll = b.roll + floatRoll;
+
+      const leatherColor = b.data.color || "#1E3A8A";
+      const goldAccent = b.data.accentColor || "#DE9E36";
+
+      c.translate(posX, posY);
+
+      // Apply 3D perspective rotation (Yaw, Pitch, Roll)
+      c.rotate(dynamicRoll);
+      // Skew/perspective projection simulation
+      const skewX = Math.sin(dynamicYaw) * 0.28;
+      const skewY = Math.sin(dynamicPitch) * 0.18;
+      c.transform(1, skewY, skewX, 1, 0, 0);
+
+      // --- 1. Soft Ambient Drop Shadow ---
+      c.save();
+      c.shadowColor = "rgba(20, 15, 10, 0.22)";
+      c.shadowBlur = 24 * b.depth;
+      c.shadowOffsetX = 6 * b.depth;
+      c.shadowOffsetY = 14 * b.depth;
+
+      c.fillStyle = "rgba(20, 15, 10, 0.06)";
+      c.fillRect(-bw / 2, -bh / 2, bw, bh);
+      c.restore();
+
+      // --- 2. Stacked Page Block (Gilded Top & Side Page Edges) ---
+      const pageTrimX = bw * 0.07;
+      const pageTrimY = bh * 0.05;
+
+      // Top Gilded Edge
+      const topPageGrad = c.createLinearGradient(-bw / 2, -bh / 2, -bw / 2 + pageTrimX, -bh / 2 - bth * 0.6);
+      topPageGrad.addColorStop(0, "#D9CDB8");
+      topPageGrad.addColorStop(0.5, goldAccent + "80");
+      topPageGrad.addColorStop(1, "#8A7963");
+
+      c.fillStyle = topPageGrad;
+      c.beginPath();
+      c.moveTo(-bw / 2 + pageTrimX, -bh / 2);
+      c.lineTo(bw / 2, -bh / 2);
+      c.lineTo(bw / 2 + bth * 0.4, -bh / 2 - bth * 0.5);
+      c.lineTo(-bw / 2 + pageTrimX + bth * 0.4, -bh / 2 - bth * 0.5);
+      c.closePath();
+      c.fill();
+
+      // Fore-Edge Page Block (Right Edge Pages)
+      const sidePageGrad = c.createLinearGradient(bw / 2, -bh / 2, bw / 2 + bth * 0.4, -bh / 2);
+      sidePageGrad.addColorStop(0, "#EDE5D8");
+      sidePageGrad.addColorStop(0.3, "#C7BAA7");
+      sidePageGrad.addColorStop(1, "#7D6D5A");
+
+      c.fillStyle = sidePageGrad;
+      c.beginPath();
+      c.moveTo(bw / 2, -bh / 2);
+      c.lineTo(bw / 2 + bth * 0.4, -bh / 2 - bth * 0.5);
+      c.lineTo(bw / 2 + bth * 0.4, bh / 2 - bth * 0.5);
+      c.lineTo(bw / 2, bh / 2);
+      c.closePath();
+      c.fill();
+
+      // Fine stacked page leaf texture lines
+      c.strokeStyle = "#5A4E3E40";
+      c.lineWidth = 0.5;
+      c.beginPath();
+      for (let p = 1; p <= 4; p++) {
+        const off = (bth * 0.4) * (p / 5);
+        c.moveTo(bw / 2 + off, -bh / 2 - (bth * 0.5) * (p / 5));
+        c.lineTo(bw / 2 + off, bh / 2 - (bth * 0.5) * (p / 5));
+      }
+      c.stroke();
+
+      // --- 3. Hardcover / Leather Front Face ---
+      c.save();
+
+      // Leather multi-stop texture gradient
+      const coverGrad = c.createLinearGradient(-bw / 2, -bh / 2, bw / 2, bh / 2);
+      coverGrad.addColorStop(0, leatherColor);
+      coverGrad.addColorStop(0.5, leatherColor + "F0");
+      coverGrad.addColorStop(1, "#110D0B");
+
+      c.fillStyle = coverGrad;
+      c.fillRect(-bw / 2, -bh / 2, bw, bh);
+
+      // Subtle leather specular sheen
+      const sheenGrad = c.createLinearGradient(-bw / 2, -bh / 2, bw / 2, -bh / 2 + bh * 0.4);
+      sheenGrad.addColorStop(0, "#FFFFFF18");
+      sheenGrad.addColorStop(0.4, "#FFFFFF05");
+      sheenGrad.addColorStop(1, "transparent");
+      c.fillStyle = sheenGrad;
+      c.fillRect(-bw / 2, -bh / 2, bw, bh * 0.4);
+
+      // Custom Cover Image if loaded
+      if (b.imgElement && b.imgLoaded) {
+        try {
+          c.save();
+          // Clip within the front cover boundaries with slight corner roundness
+          c.beginPath();
+          const r = 2.5 * b.depth;
+          c.moveTo(-bw / 2, -bh / 2);
+          c.lineTo(bw / 2 - r, -bh / 2);
+          c.quadraticCurveTo(bw / 2, -bh / 2, bw / 2, -bh / 2 + r);
+          c.lineTo(bw / 2, bh / 2 - r);
+          c.quadraticCurveTo(bw / 2, bh / 2, bw / 2 - r, bh / 2);
+          c.lineTo(-bw / 2, bh / 2);
+          c.closePath();
+          c.clip();
+
+          // Cover fit preserving natural aspect ratio
+          const imgW = b.imgElement.naturalWidth || b.imgElement.width;
+          const imgH = b.imgElement.naturalHeight || b.imgElement.height;
+          if (imgW > 0 && imgH > 0) {
+            const imgAspect = imgW / imgH;
+            const bookAspect = bw / bh;
+            let sx = 0, sy = 0, sw = imgW, sh = imgH;
+            if (imgAspect > bookAspect) {
+              sw = imgH * bookAspect;
+              sx = (imgW - sw) / 2;
+            } else {
+              sh = imgW / bookAspect;
+              sy = (imgH - sh) / 2;
+            }
+            c.drawImage(b.imgElement, sx, sy, sw, sh, -bw / 2, -bh / 2, bw, bh);
+          } else {
+            c.drawImage(b.imgElement, -bw / 2, -bh / 2, bw, bh);
+          }
+
+          // 3D Realistic Hardcover Accents on top of the image:
+          // 1. Spine hinge groove / crease shadow on the left edge
+          const spineW = bw * 0.12;
+          const hingeGrad = c.createLinearGradient(-bw / 2, 0, -bw / 2 + spineW, 0);
+          hingeGrad.addColorStop(0, "rgba(0, 0, 0, 0.65)");
+          hingeGrad.addColorStop(0.65, "rgba(0, 0, 0, 0.2)");
+          hingeGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+          c.fillStyle = hingeGrad;
+          c.fillRect(-bw / 2, -bh / 2, spineW, bh);
+
+          // Subtle gold foil spine hinge line
+          c.strokeStyle = goldAccent + "80";
+          c.lineWidth = 0.8;
+          c.beginPath();
+          c.moveTo(-bw / 2 + spineW, -bh / 2);
+          c.lineTo(-bw / 2 + spineW, bh / 2);
+          c.stroke();
+
+          // 2. Diagonal Specular Satin Sheen (simulates glossy / satin protective book coat)
+          const sheen = c.createLinearGradient(-bw / 2, -bh / 2, bw / 2, bh / 2);
+          sheen.addColorStop(0, "rgba(255, 255, 255, 0.20)");
+          sheen.addColorStop(0.35, "rgba(255, 255, 255, 0.05)");
+          sheen.addColorStop(0.6, "transparent");
+          c.fillStyle = sheen;
+          c.fillRect(-bw / 2, -bh / 2, bw, bh);
+
+          c.restore();
+        } catch (e) {}
+      } else {
+        // --- High-End Leatherbound Gold Foil Filigree & Typography ---
+
+        // Embossed Spine Ridge (Left Hinge)
+        const spineW = bw * 0.14;
+        c.fillStyle = "#00000045";
+        c.fillRect(-bw / 2, -bh / 2, spineW, bh);
+
+        // Gold Foil Hinge Line
+        c.strokeStyle = goldAccent + "65";
+        c.lineWidth = 0.8;
+        c.beginPath();
+        c.moveTo(-bw / 2 + spineW, -bh / 2);
+        c.lineTo(-bw / 2 + spineW, bh / 2);
+        c.stroke();
+
+        // 4 Raised Spine Bands (Classic Morrocan Bookbinding)
+        c.strokeStyle = goldAccent + "90";
+        c.lineWidth = 1.2;
+        const spineBands = [-bh * 0.35, -bh * 0.12, bh * 0.12, bh * 0.35];
+        c.beginPath();
+        spineBands.forEach((by) => {
+          c.moveTo(-bw / 2, by);
+          c.lineTo(-bw / 2 + spineW, by);
+        });
+        c.stroke();
+
+        // Gold Foil Inset Border on Front Cover
+        const inset = 7 * b.depth;
+        c.strokeStyle = goldAccent + "80";
+        c.lineWidth = 0.75;
+        c.strokeRect(-bw / 2 + spineW + inset, -bh / 2 + inset, bw - spineW - inset * 2, bh - inset * 2);
+
+        // Ornate Corner Brackets (Classical Law Book Tooling)
+        c.strokeStyle = goldAccent + "99";
+        c.lineWidth = 0.9;
+        const cornerSize = 10 * b.depth;
+        const cx1 = -bw / 2 + spineW + inset;
+        const cx2 = bw / 2 - inset;
+        const cy1 = -bh / 2 + inset;
+        const cy2 = bh / 2 - inset;
+
+        c.beginPath();
+        // Top-left
+        c.moveTo(cx1, cy1 + cornerSize);
+        c.lineTo(cx1 + cornerSize, cy1);
+        // Top-right
+        c.moveTo(cx2 - cornerSize, cy1);
+        c.lineTo(cx2, cy1 + cornerSize);
+        // Bottom-left
+        c.moveTo(cx1, cy2 - cornerSize);
+        c.lineTo(cx1 + cornerSize, cy2);
+        // Bottom-right
+        c.moveTo(cx2 - cornerSize, cy2);
+        c.lineTo(cx2, cy2 - cornerSize);
+        c.stroke();
+
+        // Stamped Gold Title Typography
+        const contentCenterX = (-bw / 2 + spineW + bw / 2) / 2;
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+
+        // Title
+        const titleFontSize = Math.max(8, Math.floor(10 * b.depth));
+        c.font = `600 ${titleFontSize}px 'Cinzel', 'Times New Roman', serif`;
+        c.fillStyle = goldAccent + "E6";
+        c.shadowColor = goldAccent + "60";
+        c.shadowBlur = 3;
+        c.fillText(b.data.title, contentCenterX, -bh * 0.08);
+        c.shadowBlur = 0;
+
+        // Subtitle / Citation
+        if (b.data.subtitle) {
+          const subFontSize = Math.max(6, Math.floor(7 * b.depth));
+          c.font = `italic ${subFontSize}px 'Times New Roman', serif`;
+          c.fillStyle = goldAccent + "A6";
+          c.fillText(b.data.subtitle, contentCenterX, bh * 0.08);
+        }
+
+        // Center Seal / Insignia (Embossed Blind Stamp)
+        const sealR = 12 * b.depth;
+        c.strokeStyle = goldAccent + "50";
+        c.lineWidth = 0.6;
+        c.beginPath();
+        c.arc(contentCenterX, bh * 0.26, sealR, 0, Math.PI * 2);
+        c.stroke();
+
+        // Inner seal star / scales glyph
+        c.strokeStyle = goldAccent + "70";
+        c.lineWidth = 0.5;
+        c.beginPath();
+        c.moveTo(contentCenterX - sealR * 0.6, bh * 0.26);
+        c.lineTo(contentCenterX + sealR * 0.6, bh * 0.26);
+        c.stroke();
+      }
+
+      // Hardcover outer border
+      c.strokeStyle = goldAccent + "45";
+      c.lineWidth = 0.75;
+      c.strokeRect(-bw / 2, -bh / 2, bw, bh);
+
+      c.restore();
+
+      // --- 4. Golden Silk Ribbon Bookmark hanging from bottom ---
+      c.save();
+      const ribbonX = bw * 0.08;
+      const ribbonLen = bh * 0.38;
+      const swayRibbon = Math.sin(time * 2.2 + b.floatOffset) * 4;
+
+      c.strokeStyle = goldAccent + "CC";
+      c.lineWidth = 3.5 * b.depth;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(ribbonX, bh / 2 - 2);
+      c.quadraticCurveTo(ribbonX + swayRibbon * 0.5, bh / 2 + ribbonLen * 0.6, ribbonX + swayRibbon, bh / 2 + ribbonLen);
+      c.stroke();
+      c.restore();
+
+      c.restore();
+    }
+
+    // --- ARCHITECTURAL SCALES METHODS (Unaffected by scroll) ---
+
+    function drawPrecisionColumn(
+      c: CanvasRenderingContext2D,
+      cx: number,
+      cy: number,
+      r: number,
+      dark: string
+    ) {
+      c.save();
+      const dialR = r * 0.26;
+      const shaftW = Math.max(6, r * 0.035);
+      
+      c.fillStyle = dark;
+      
+      // Central pillar (Flat 2D, more elegant)
+      c.fillRect(cx - shaftW / 2, cy + r * 0.06, shaftW, r * 0.90);
+      
+      // Tiered Decorative Base
+      c.fillRect(cx - shaftW * 1.5, cy + r * 0.96, shaftW * 3, r * 0.03);
+      c.fillRect(cx - shaftW * 2.5, cy + r * 0.99, shaftW * 5, r * 0.04);
+      c.fillRect(cx - shaftW * 3.5, cy + r * 1.03, shaftW * 7, r * 0.04);
+
+      // Top pillar extending to dial arc
+      c.fillRect(cx - shaftW * 0.4, cy - dialR - 10, shaftW * 0.8, r * 0.32 + 10);
+      
+      // Decorative Finial above dial
+      c.beginPath();
+      c.arc(cx, cy - dialR - 12, shaftW * 1.2, 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.moveTo(cx - shaftW * 0.8, cy - dialR - 12);
+      c.lineTo(cx, cy - dialR - 25);
+      c.lineTo(cx + shaftW * 0.8, cy - dialR - 12);
+      c.fill();
+      
+      // Capital & Saddle
+      c.fillRect(cx - shaftW * 1.5, cy + r * 0.06, shaftW * 3, r * 0.02);
+      c.fillRect(cx - shaftW * 1.2, cy + r * 0.03, shaftW * 2.4, r * 0.03);
+      
+      // Perfect circular cradle
+      c.beginPath();
+      c.arc(cx, cy, r * 0.045, 0, Math.PI, false);
+      c.fill();
+      
+      c.restore();
+    }
+
+    function drawEquilibriumDial(
+      c: CanvasRenderingContext2D,
+      cx: number,
+      cy: number,
+      r: number,
+      dark: string
+    ) {
+      c.save();
+      const dialR = r * 0.26;
+      
+      c.strokeStyle = dark;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(cx, cy, dialR, -Math.PI * 0.5 - 0.4, -Math.PI * 0.5 + 0.4);
+      c.stroke();
+
+      // Tick marks for the dial
+      for (let i = 0; i < 9; i++) {
+        const theta = -Math.PI * 0.5 - 0.4 + (i / 8) * 0.8;
+        const isCenter = (i === 4);
+        const tickLen = isCenter ? 8 : (i % 2 === 0 ? 5 : 3);
+        
+        c.lineWidth = isCenter ? 2 : 1;
+        c.beginPath();
+        c.moveTo(cx + Math.cos(theta) * dialR, cy + Math.sin(theta) * dialR);
+        c.lineTo(cx + Math.cos(theta) * (dialR - tickLen), cy + Math.sin(theta) * (dialR - tickLen));
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    function drawEngineeredBeam(
+      c: CanvasRenderingContext2D,
+      cx: number,
+      cy: number,
+      r: number,
+      beamAngle: number,
+      primary: string,
+      dark: string
+    ) {
+      const beamHalfLen = r * 0.96;
+      const centerThickness = Math.max(5, r * 0.035);
+      const tipThickness = Math.max(3, r * 0.02);
+      
+      // Hook world coords (removed hook ring, attaches directly to beam tips)
+      const cosA = Math.cos(beamAngle);
+      const sinA = Math.sin(beamAngle);
+      const hookLocalY = 0; // Exactly at the middle of the tip
+      
+      const leftHookX = cx - beamHalfLen * cosA - hookLocalY * sinA;
+      const leftHookY = cy - beamHalfLen * sinA + hookLocalY * cosA;
+      const rightHookX = cx + beamHalfLen * cosA - hookLocalY * sinA;
+      const rightHookY = cy + beamHalfLen * sinA + hookLocalY * cosA;
+
+      c.save();
+      c.translate(cx, cy);
+      c.rotate(beamAngle);
+
+      c.fillStyle = dark;
+      
+      // Beam Body (Elegant classical beam, thick in middle, tapering to ends)
+      c.beginPath();
+      c.moveTo(-beamHalfLen, -tipThickness);
+      c.lineTo(-beamHalfLen, tipThickness);
+      c.quadraticCurveTo(-beamHalfLen * 0.5, centerThickness, 0, centerThickness);
+      c.quadraticCurveTo(beamHalfLen * 0.5, centerThickness, beamHalfLen, tipThickness);
+      c.lineTo(beamHalfLen, -tipThickness);
+      c.quadraticCurveTo(beamHalfLen * 0.5, -centerThickness, 0, -centerThickness);
+      c.quadraticCurveTo(-beamHalfLen * 0.5, -centerThickness, -beamHalfLen, -tipThickness);
+      c.fill();
+      
+      // Decorative end knobs
+      c.beginPath();
+      c.arc(-beamHalfLen, 0, tipThickness * 1.5, 0, Math.PI * 2);
+      c.arc(beamHalfLen, 0, tipThickness * 1.5, 0, Math.PI * 2);
+      c.fill();
+      
+      // Center Boss
+      c.beginPath();
+      c.arc(0, 0, r * 0.045, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = primary;
+      c.beginPath();
+      c.arc(0, 0, r * 0.015, 0, Math.PI * 2);
+      c.fill();
+
+      // Needle Pointer (Long, elegant, very sharp)
+      const needleLen = r * 0.26 - 2;
+      c.fillStyle = dark;
+      c.beginPath();
+      c.moveTo(-r * 0.02, 0);
+      c.lineTo(0, -needleLen);
+      c.lineTo(r * 0.02, 0);
+      c.fill();
+      
+      c.restore();
+
+      return { leftHookX, leftHookY, rightHookX, rightHookY };
+    }
+
+    function drawArchitecturalPans(
+      c: CanvasRenderingContext2D,
+      lHx: number,
+      lHy: number,
+      rHx: number,
+      rHy: number,
+      scaleRef: number,
+      leftPanSway: number,
+      rightPanSway: number,
+      plateColor: string,
+      primary: string
+    ) {
+      const dropDistance = scaleRef * 0.85;
+      const panR = scaleRef * 0.36;
+
+      drawSinglePan(c, lHx, lHy, dropDistance, panR, leftPanSway, plateColor || primary, primary);
+      drawSinglePan(c, rHx, rHy, dropDistance, panR, rightPanSway, plateColor || primary, primary);
+    }
+
+    function drawSinglePan(
+      c: CanvasRenderingContext2D,
+      hookX: number,
+      hookY: number,
+      dropDistance: number,
+      panR: number,
+      sway: number,
+      plateColor: string,
+      primaryColor: string
+    ) {
+      c.save();
+      
+      const panCenterX = hookX + Math.sin(sway) * dropDistance;
+      const panCenterY = hookY + Math.cos(sway) * dropDistance;
+      
+      // 3 Classic Strings connecting to edges and back
+      c.strokeStyle = primaryColor;
+      c.lineWidth = 1.0;
+      c.beginPath();
+      // Left string
+      c.moveTo(hookX, hookY);
+      c.lineTo(panCenterX - panR * 0.85, panCenterY);
+      // Right string
+      c.moveTo(hookX, hookY);
+      c.lineTo(panCenterX + panR * 0.85, panCenterY);
+      // Center/Back string
+      c.moveTo(hookX, hookY);
+      c.lineTo(panCenterX, panCenterY + panR * 0.12);
+      c.stroke();
+      
+      // Better, rounder bowl
+      c.fillStyle = plateColor;
+      
+      // Top rim ellipse
+      c.beginPath();
+      c.ellipse(panCenterX, panCenterY, panR, panR * 0.15, 0, 0, Math.PI * 2);
+      c.fill();
+      
+      // Deep bowl bottom
+      c.beginPath();
+      c.ellipse(panCenterX, panCenterY, panR, panR * 0.15, 0, 0, Math.PI);
+      c.bezierCurveTo(
+        panCenterX - panR * 0.9, panCenterY + panR * 0.6,
+        panCenterX + panR * 0.9, panCenterY + panR * 0.6,
+        panCenterX + panR, panCenterY
+      );
+      c.fill();
+      
+
+      c.restore();
+    }
+
+    // Start Render Loop
+    animId = requestAnimationFrame(render);
+  }
+
+  function setupAllScales() {
+    document.querySelectorAll('[id^="ue-scales-justice-"]').forEach((el) => {
+      initScalesOfJustice(el as HTMLElement);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupAllScales);
+  } else {
+    setupAllScales();
+  }
+
+  document.addEventListener('astro:page-load', setupAllScales);
+</script>
