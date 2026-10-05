@@ -3,7 +3,14 @@ import { Image } from 'astro:assets';
 import book1 from '../assets/books/book1.png';
 import book2 from '../assets/books/book2.png';
 import book3 from '../assets/books/book3.png';
+import { useTranslations } from '../i18n/utils';
 
+const { lang = 'ar' } = Astro.props;
+const t = useTranslations(lang);
+
+// Note: Book titles and descriptions might remain in Arabic if they are proper names of Arabic publications,
+// but for the sake of completion, you can translate them in ui.ts if needed. Here we keep them as they are
+// assuming the books themselves are in Arabic.
 const books = [
   { 
     img: book1, 
@@ -29,21 +36,19 @@ const books = [
 <section id="writer" class="py-20 px-4 bg-base-100 relative z-10 border-t border-base-200">
   <div class="max-w-6xl mx-auto">
     <div class="text-center mb-16">
-      <h2 class="text-4xl md:text-5xl font-heading font-bold text-primary mb-4">إصدارات ومؤلفات</h2>
+      <h2 class="text-4xl md:text-5xl font-heading font-bold text-primary mb-4">{t('writer.title')}</h2>
       <div class="w-24 h-1 bg-accent mx-auto rounded-full"></div>
       <p class="mt-6 text-lg text-neutral-600 max-w-2xl mx-auto font-body">
-        إسهامات فكرية وأكاديمية تثري المكتبة القانونية وتكون مرجعاً للباحثين والممارسين.
+        {t('writer.desc')}
       </p>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
       {books.map((book) => (
-        <a href={book.link} target="_blank" rel="noopener noreferrer" class="flex flex-col items-center group cursor-pointer">
-          <!-- Book Cover with 3D-like hover effect -->
+        <a href={book.link} target="_blank" rel="noopener noreferrer" class="flex flex-col items-center group cursor-pointer" dir="rtl">
           <div class="relative w-48 h-64 md:w-56 md:h-72 mb-6 perspective-1000">
             <div class="w-full h-full rounded-md shadow-2xl transition-transform duration-500 group-hover:-translate-y-4 group-hover:rotate-y-12">
               <Image src={book.img} alt={book.title} class="w-full h-full object-cover rounded-md" />
-              <!-- Highlight effect -->
               <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/30 rounded-md"></div>
             </div>
           </div>

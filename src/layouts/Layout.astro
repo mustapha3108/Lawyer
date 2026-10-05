@@ -6,9 +6,37 @@ import Footer from '../components/Footer.astro';
 import Book1 from '../assets/books/book1.png';
 import Book2 from '../assets/books/book2.png';
 import Book3 from '../assets/books/book3.png';
+
+interface Props {
+  lang?: "ar" | "fr" | "en";
+}
+
+const { lang = "ar" } = Astro.props;
+const dir = lang === "ar" ? "rtl" : "ltr";
+
+// Localized Metadata
+const meta = {
+  ar: {
+    title: "مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا",
+    desc: "مكتب المحامي بلمولود عماد منير، محامي معتمد لدى المحكمة العليا ومجلس الدولة بالجزائر. خبرة تفوق 28 سنة في الترافع والاستشارات القانونية.",
+    keys: "محامي في الجزائر, محامي المحكمة العليا, مجلس الدولة, استشارات قانونية, قضايا جزائية, قضايا مدنية, قانون الأعمال, بلمولود عماد منير, محاماة الجزائر, محامي درارية, avocat algerie, law firm algeria",
+  },
+  fr: {
+    title: "Cabinet de Maître Belmouloud Imed Mounir | Avocat à la Cour Suprême",
+    desc: "Cabinet d'avocat Belmouloud Imed Mounir, agréé près la Cour Suprême et le Conseil d'État en Algérie. Plus de 28 ans d'expérience en conseil juridique et contentieux.",
+    keys: "avocat algérie, avocat cour suprême algérie, avocat conseil d'état, cabinet d'avocat alger, droit civil, droit pénal algérie, droit des affaires algérie, avocat draria, belmouloud imed mounir, محامي في الجزائر",
+  },
+  en: {
+    title: "Law Office of Belmouloud Imed Mounir | Supreme Court Attorney",
+    desc: "Law office of Belmouloud Imed Mounir, attorney admitted to the Supreme Court and Council of State in Algeria. Over 28 years of experience in litigation and legal consulting.",
+    keys: "lawyer in algeria, supreme court lawyer algeria, state council attorney, legal consulting alger, civil law, criminal law algeria, business law, draria lawyer, belmouloud imed mounir, avocat algerie",
+  }
+};
+
+const tMeta = meta[lang];
 ---
 <!doctype html>
-<html lang="ar" dir="rtl" data-theme="law">
+<html lang={lang} dir={dir} data-theme="law">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
@@ -17,25 +45,25 @@ import Book3 from '../assets/books/book3.png';
 		<meta name="generator" content={Astro.generator} />
 		
 		<!-- Primary Meta Tags -->
-		<title>مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا</title>
-		<meta name="title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
-		<meta name="description" content="مكتب المحامي بلمولود عماد منير، محامي معتمد لدى المحكمة العليا ومجلس الدولة بالجزائر. خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في القضايا المدنية والجزائية والتجارية." />
-		<meta name="keywords" content="محامي في الجزائر, محامي المحكمة العليا, مجلس الدولة, استشارات قانونية, قضايا جزائية, قضايا مدنية, قانون الأعمال, بلمولود عماد منير, محاماة الجزائر, محامي درارية" />
-		<meta name="author" content="الأستاذ بلمولود عماد منير" />
+		<title>{tMeta.title}</title>
+		<meta name="title" content={tMeta.title} />
+		<meta name="description" content={tMeta.desc} />
+		<meta name="keywords" content={tMeta.keys} />
+		<meta name="author" content="Belmouloud Imed Mounir" />
 
 		<!-- Open Graph / Facebook -->
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content="https://belmouloud.law/" />
-		<meta property="og:title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
-		<meta property="og:description" content="خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في مختلف المجالات أمام كافة الجهات القضائية بالجزائر." />
+		<meta property="og:title" content={tMeta.title} />
+		<meta property="og:description" content={tMeta.desc} />
 		<meta property="og:image" content="/banner.jpeg" />
-		<meta property="og:locale" content="ar_DZ" />
+		<meta property="og:locale" content={lang === 'ar' ? 'ar_DZ' : lang === 'fr' ? 'fr_FR' : 'en_US'} />
 
 		<!-- Twitter -->
 		<meta property="twitter:card" content="summary_large_image" />
 		<meta property="twitter:url" content="https://belmouloud.law/" />
-		<meta property="twitter:title" content="مكتب الأستاذ بلمولود عماد منير | محامي معتمد لدى المحكمة العليا" />
-		<meta property="twitter:description" content="خبرة تفوق 28 سنة في الترافع والاستشارات القانونية في مختلف المجالات أمام كافة الجهات القضائية بالجزائر." />
+		<meta property="twitter:title" content={tMeta.title} />
+		<meta property="twitter:description" content={tMeta.desc} />
 		<meta property="twitter:image" content="/banner.jpeg" />
 	</head>
 	<body class="font-body text-base-content antialiased">
@@ -47,11 +75,11 @@ import Book3 from '../assets/books/book3.png';
 
 		<!-- Main Content Wrapper -->
 		<div class="relative z-10 min-h-[100svh] flex flex-col">
-			<Navbar />
+			<Navbar lang={lang} />
 			<main class="flex-grow">
 				<slot />
 			</main>
-			<Footer />
+			<Footer lang={lang} />
 		</div>
 	</body>
 </html>

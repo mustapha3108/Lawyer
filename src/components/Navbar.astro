@@ -1,4 +1,7 @@
 ---
+import { useTranslations } from '../i18n/utils';
+const { lang = 'ar' } = Astro.props;
+const t = useTranslations(lang);
 ---
 
 <header class="navbar bg-base-100/90 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-base-200/50">
@@ -8,26 +11,38 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
       </div>
       <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52 font-heading font-bold text-lg text-primary">
-        <li><a class="text-lg" href="#about">عن المكتب</a></li>
-        <li><a class="text-lg" href="#experience">الخبرة</a></li>
-        <li><a class="text-lg" href="#practice-areas">مجالات التخصص</a></li>
-        <li><a class="text-lg" href="#writer">المؤلفات</a></li>
-        <li><a class="text-lg" href="#contact">اتصل بنا</a></li>
+        <li><a class="text-lg" href="#about">{t('nav.about')}</a></li>
+        <li><a class="text-lg" href="#experience">{t('nav.experience')}</a></li>
+        <li><a class="text-lg" href="#practice-areas">{t('nav.practice')}</a></li>
+        <li><a class="text-lg" href="#writer">{t('nav.writer')}</a></li>
+        <li><a class="text-lg" href="#contact">{t('nav.contact')}</a></li>
       </ul>
     </div>
-    <a href="/" class="btn btn-ghost text-2xl font-heading font-bold text-primary">الأستاذ بلمولود</a>
+    <a href={`/${lang === 'ar' ? '' : lang}`} class="btn btn-ghost text-2xl font-heading font-bold text-primary">
+      {lang === 'fr' ? 'Maître Belmouloud' : lang === 'en' ? 'Maitre Belmouloud' : 'الأستاذ بلمولود'}
+    </a>
   </div>
   <div class="navbar-center hidden lg:flex">
     <ul class="menu menu-horizontal px-1 font-heading font-bold text-xl text-primary gap-4">
-      <li><a href="#about" class="hover:text-accent transition-colors hover:bg-transparent">عن المكتب</a></li>
-      <li><a href="#experience" class="hover:text-accent transition-colors hover:bg-transparent">الخبرة</a></li>
-      <li><a href="#practice-areas" class="hover:text-accent transition-colors hover:bg-transparent">مجالات التخصص</a></li>
-      <li><a href="#writer" class="hover:text-accent transition-colors hover:bg-transparent">المؤلفات</a></li>
-      <li><a href="#contact" class="hover:text-accent transition-colors hover:bg-transparent">اتصل بنا</a></li>
+      <li><a href="#about" class="hover:text-accent transition-colors hover:bg-transparent">{t('nav.about')}</a></li>
+      <li><a href="#experience" class="hover:text-accent transition-colors hover:bg-transparent">{t('nav.experience')}</a></li>
+      <li><a href="#practice-areas" class="hover:text-accent transition-colors hover:bg-transparent">{t('nav.practice')}</a></li>
+      <li><a href="#writer" class="hover:text-accent transition-colors hover:bg-transparent">{t('nav.writer')}</a></li>
+      <li><a href="#contact" class="hover:text-accent transition-colors hover:bg-transparent">{t('nav.contact')}</a></li>
     </ul>
   </div>
-  <div class="navbar-end">
-    <a href="#contact" class="btn btn-primary font-heading font-bold text-lg text-primary-content shadow-sm hover:shadow-md transition-shadow">طلب استشارة</a>
+  <div class="navbar-end gap-2">
+    <!-- Language Switcher -->
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost m-1 uppercase font-body font-bold">{lang}</div>
+      <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-24 font-body font-bold text-primary">
+        <li><a href="/" class={lang === 'ar' ? 'active' : ''}>AR</a></li>
+        <li><a href="/fr" class={lang === 'fr' ? 'active' : ''}>FR</a></li>
+        <li><a href="/en" class={lang === 'en' ? 'active' : ''}>EN</a></li>
+      </ul>
+    </div>
+    <a href="#contact" class="btn btn-primary font-heading font-bold text-lg text-primary-content shadow-sm hover:shadow-md transition-shadow hidden sm:flex">
+      {t('nav.consult')}
+    </a>
   </div>
 </header>
-
